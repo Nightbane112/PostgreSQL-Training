@@ -218,6 +218,202 @@ order by title;
 5. Sum function
 
 
+*************************** Filtering Records ********************************
+
+select * from customer (fetch all records)
+
+select address,email from customer (selected columns values)
+
+select 19*45
+select name||age, email from customer (with expression)
+select name||age as username, email from customer (with alias)
+
+select distinct create_date from customer;
+select distinct activebool from customer;
+
+******************** Joins *******************************************************
+
+Inner Join for Data retrival from multiple tables.
+
+we have used dvdrental database
+
+** simple query
+
+select 
+    customer.customer_id,
+    first_name,
+    last_name,
+    amount,
+    payment_date
+from 
+    customer
+Inner join payment
+on payment.customer_id = customer.customer_id
+order by payment_date
+
+** with alias
+
+select 
+    c.customer_id,
+    first_name,
+    last_name,
+    amount,
+    payment_date
+from 
+    customer c
+Inner join payment p
+on p.customer_id = c.customer_id
+order by payment_date
+
+** same customerid if you don't want to repeat then you can use using
+
+select 
+    customer_id,
+    first_name,
+    last_name,
+    amount,
+    payment_date
+from 
+    customer
+Inner join payment
+using (customer_id)
+order by payment_date
+
+*****
+Task
+
+connect 3 tables with Inner join
+Customer,Payment and staff
+
+retrive customerid, cust firstname, cust lastname, staff firstname, stafflastname, amount, paymentdate
+
+*******************************************************************************************************
+Full Outer join
+
+select 
+    film.film_id,
+    title,
+    inventory_id
+from
+    film
+full outer join inventory
+on inventory.film_id = film.film_id
+order by title
+
+********Left Join
+
+select 
+    film.film_id,
+    title,
+    inventory_id
+from
+    film
+LEFT join inventory
+on inventory.film_id = film.film_id
+order by title
+
+** Right join
+
+select 
+    film.film_id,
+    title,
+    inventory_id
+from
+    film
+RIGHT join inventory
+on inventory.film_id = film.film_id
+order by title
+
+**********Self join
+
+table joining with itself
+
+select 
+    f1.title,
+    f2.title,
+    f1.length
+from
+    film f1
+Inner join film f2
+on f1.film_id<> f2.film_id
+RIGHT join inventory
+on inventory.film_id = film.film_id
+order by title
+
+
+******Cross Join
+create table t1(label char(1) primary key)
+
+create table t2(score int primary key)
+
+insert into t1 (label) values ('A'),('B');
+
+insert into t2 (score) values (1),(2),(3)
+
+select * from t1 cross join t2
+
+_______________________________________________________________________________________________
+
+Sorting (Order By caluse)
+
+in asc
+
+>select * from customer order by first_name 
+
+>select * from customer order by first_name desc
+
+
+Execution Sequence
+-----------------
+
+from > where > group by > having > select > order by > limit 
+
+
+select first_name, length(first_name) len  
+from customer 
+order by len desc
+
+select first_name, length(first_name) len  
+from customer 
+where length(first_name)>6
+order by len 
+
+
+>select 
+    film.film_id,
+    title,
+    inventory_id
+from
+    film
+left join inventory
+on inventory.film_id = film.film_id
+order by inventory_id Nulls first, title desc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
