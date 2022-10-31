@@ -1,0 +1,22 @@
+1. select all records from member all tables
+2. select specific columns from member table and facilities table
+  (concat fname and lname), initcap for address
+	use aliases while using the string functions
+
+3. find out the members joined from same date
+4. find out the count of members based on date, order by desc
+
+_______________________________________________________________________________
+
+1. retrive the details of facilities with Id 1 and 5? 
+   (Don't use OR operator)
+
+2.create a list of facilities based on the montahly maintance
+	if >100 then display costly
+	else display cheap
+
+3. find out the members joined after september 1st
+	(memid, surname, firstname, join date)
+
+4. in the members table provide ordered list of first 10 surnames (must not contain any duplicate values)
+
