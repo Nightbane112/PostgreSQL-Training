@@ -1,0 +1,33 @@
+1. select the total number of members who made booking atleast one time.
+
+solution:
+
+select count(distinct memid) from bookings
+select count(*) from (select distinct memid from bookings) as mems
+
+2. produce the list of facilities with more than 1000 slots booked.
+show facilityid and slot. sort by facilityid
+
+solution:
+select facid, sum(slots) as total
+from bookings
+group by facid
+having sum(slots)>1000
+order by facid
+
+3. select list of facilities with its total revenue.
+   output display facility name, revenue, sort by revenue.
+
+    also check the cost is diffrent for guest and regular member.
+
+select f.name, sum(slots * case 
+                   when memid=0 then f.guestcost
+                  else f.membercost end) as revenue
+from bookings b
+inner join facilities f
+on b.facid= f.facid
+group by f.name
+order by revenue
+
+
+

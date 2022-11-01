@@ -1,0 +1,347 @@
+Union 
+------------------------
+
+basically combines the 2 or more results of select queries.
+
+Rules:
+
+--number and the order of the columns in the select list must be same in both queries.
+--the datatype must be compatible
+
+create table top_rated_films(title varchar, release_year int)
+create table most_popular_films(title varchar, release_year int)
+
+insert into top_rated_films(title, release_year) 
+values
+('the godfather',1976),
+('Angry Men',1967)
+
+insert into most_popular_films (title, release_year) 
+values
+('the godfather',1976),
+('Angry Men',1967),
+('Greyhound',2020)
+
+select * from top_rated_films
+union
+select * from most_popular_films
+
+select * from top_rated_films
+union all
+select * from most_popular_films
+
+select * from top_rated_films
+union
+select * from most_popular_films
+order by title
+
+
+Intersect 
+----------------------------------------------------
+get the common values from 2 tables.
+
+select * from top_rated_films
+intersect
+select * from most_popular_films
+order by title
+
+******************************* Utility Operators ****************************************
+
+Arithmetic Operators (+, -, * , / , %, ^, !)
+
+select ||/27 as cuberoot, |/16 as squareroot
+
+Comparison Operators: (=, !=, <>, >, <, >=,<= )
+
+Logical Operator (AND , OR NOT)
+
+select 4*5 mul, 4+2 add, 10/5 div, 10%3 modulo
+
+select payment_id, amount+(amount * 0.2) as amount, payment_date from payment
+
+select payment_id, amount+(amount * 0.2) as newamount, payment_date 
+from payment
+where amount>7
+
+select title, rental_duration,replacement_cost 
+from film 
+where rental_duration=5 and replacement_cost=19.99
+
+select title, rental_duration,replacement_cost 
+from film 
+where rental_duration=5 or replacement_cost=19.99
+
+******************************************* Functions ***********************************************
+
+Mathematical functions
+
+select abs(-17.9) absvalue, cbrt(27) cuberoot ,ceil(-42.8) ceilvalue,
+floor(-42.9) floorvalue, exp(1.0) exponential, pi()
+
+select random(), trunc(56.67), trunc(42.34566,3), mod(10,3)
+
+
+Trigonometrics functions are also there
+
+acos(), asign(),atan(),cos(),sign(),tan()
+
+********************************* Datatypes ************************************************************
+
+Numeric datatypes
+
+whole numbers
+---------------------------
+smallint (2 bytes)
+int (4 bytes)
+bigint (8 bytes)
+decimal variable
+numerics variable
+-- fractional numbers----------------
+real (4 bytes) - 6 decimal digits
+double (8 bytes)- 15 decimal digits
+--auto incrementing numbers-------------------
+small serial - 2 bytes
+serial - 4 bytes
+bigserial - 8 bytes
+_____________________________________________________________________________
+character Types
+
+variable length with limit n - varchar(n)
+
+fixed length - char(n)
+
+unlimited length - text
+
+______________________________________________________________________________
+
+Date and time data types
+
+timestamp- 8 bytes (date and time without zone)
+timestampz - 8 bytes (with zone)
+date  - 4 bytes
+time - 8 bytes
+interval - 12 bytes
+
+________________________________________________________________________________
+
+boolean- 1 byte
+
+________________________________________________________________________________
+
+Complex datatypes
+
+Geometric datatypes
+
+point 16 bytes
+line 32 bytes
+lseg 32 bytes
+box 32 bytes
+path 16 bytes
+polygon 16 bytes
+circle 24 bytes
+
+Network address
+
+macaddr 6 bytes
+cidr 7 bytes
+
+Json type data
+Array data
+
+create table ordertable (
+    id serial primary key,
+    cust_id int,
+    product_id integer[]
+)
+
+insert into ordertable (cust_id,product_id)
+values(101, '{3001,5602,7231}')
+
+insert into ordertable (cust_id,product_id)
+values(101, array[3001,5602,7231])
+
+select * from ordertable
+
+insert into ordertable (cust_id,producd_id)
+values(101, array[5202,7230])
+
+select * from ordertable where producd_id[1]=3001 OR
+producd_id[2]=3001 OR producd_id[3]=3001
+
+
+select * from ordertable where 3001= ANY(producd_id)
+
+_______________________________________________________________________________________
+
+Database Design Patterns
+
+
+1. One to many relationships (master-detail or parent-child)
+2. many to many 
+3. one to one
+4. Star schema: OLAP design
+5. Fully Normalized OLTP design
+6.Lookup table
+7. Uni table
+8. Array Table
+
+********************************* Building a Like system *************************************
+
+create table user1(
+    uid serial primary key,
+    name varchar(100),
+    email varchar(100),
+    password varchar(100)
+)
+
+create table post(
+    pid serial primary key,
+    title varchar(100),
+    description text,
+    user_id int references user1(uid) 
+)
+
+create table likes(
+    lid serial primary key,
+    user_id int references user1(uid),
+    post_id int references post(pid)
+)
+insert into user1 (name, email,password) 
+values
+('aniss','aniss@gmail.com','aniss@123'),
+('mikhail','mikhail@gmail.com','mikhail@123'),
+('sonam','sonam@gmail.com','sonam@123')
+select * from user1
+insert into post (title, description,user_id)
+values
+('Diwali fun','enjoyed lot with family',1),
+('Christmus fun','enjoyed lot with friends',2),
+('Result Declared','Hurrey I got distinction',3)
+
+select * from post
+
+insert into likes (user_id, post_id) 
+values
+(1,1),(1,2),(1,3),(2,3),(3,2),(3,1)
+
+select * from likes
+
+1. find no of likes based on the post
+
+select post_id,count(*)
+from likes 
+group by post_id
+
+
+2. no of likes on post 3: you can do by your own
+
+3. select users name who likes post 1.
+
+select name 
+from user1
+where
+uid in (select user_id from likes where post_id=1)
+
+****************************** Indexes *****************************************************
+
+with help of indexes we can improove the performance of query.
+
+explain select * 
+from address 
+where phone= '288241215394'
+
+select * from address
+
+create index idx_address_phone
+on address(phone)
+
+drop index idx_address_phone
+
+**list indexes
+select tablename,indexname,indexdef
+from pg_indexes
+where schemaname='public'
+
+** index in table
+
+select indexname,indexdef
+from pg_indexes
+where tablename='address'
+
+Types of indexes: 
+
+1. using btree index by default
+
+(self balancing tree which maintains sorted data and also allow searches, seq access and deletions)
+
+2. Hash Indexes
+
+can handle only simple eqality comparison (=).
+
+whenever indexed column is used in comparison using equal operator, query planner will use the hash index.
+
+create index idx_address_phone
+on address using HASH (phone)
+
+3. unique index
+
+create unique index customer_email
+on customer(email)
+
+calculating disk space of indexes
+-----------------------------------------------
+
+select  pg_size_pretty(pg_relation_size('idx_fk_city_id')), 
+pg_size_pretty(pg_relation_size('idx_address_phone'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
