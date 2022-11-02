@@ -1,0 +1,697 @@
+PostgreSQL Performance Turing
+--------------------------------------
+
+basic setup
+---------------------
+Hardware updates: change your physical server
+configuration: system configuration
+vaccuming: set the vaccume settings which will help to improve the performance
+
+analyse schema
+----------------------------
+
+check query performance
+check logs
+index for indexes for query performance
+
+Postgre SQL conf file (postgresql.conf)
+-------------------------------------------------
+
+show all; to check database configuration
+
+if you change configuration file then you need a restart to check that execute below query.
+
+>select * from pg_settings where pending_restart = true;
+
+__________________________________________________________________________________________________
+
+Vaccuming
+
+vaccume:is the scan which marks tuples which are no longer needed that can be overridden.
+
+Failure to do  means you have dead tuples available in the system which are called as bloat. Bloat mostly originates from the records which are being inserted , updated or deleted.
+
+>vacuum
+
+to see history of previosuly run vacuum
+
+>select * from pg_stat_user_tables
+
+***** Analyzing the preformance
+
+Lifecycle of Query execution
+
+query > parsed > create a plan > execute plan > retrive data
+
+plan: steps take by postgresql to take to find the query data. (you db, schema, indexes all affect while creating the plan)
+
+
+update the postgre algorithm data with analyze command.
+
+if you are updating tables/ schemas/indexes the execute analyze command so changes will take effect.
+
+*** to understand how query executed 
+
+explain
+
+(show the proper breakdown how query executed)
+
+> explain analyze (about predicted plan and how query performed)
+
+***********  logs
+
+to get the logs in csv file
+
+edit configuration  file
+
+log_destination= 'csvlog'
+
+restrat postgresql server
+
+check the desctination disctory will have .csv files for logs.
+
+===============================================================================================================
+Simple common table expressions:
+
+it is a temporary resultset which you will get by executing simple sql statements select, insert, update or delete.
+
+-----------------------------------------------------------
+with cte_film as 
+    (
+        select 
+        film_id,
+        title,
+        (CASE 
+            when length<40 
+                THEN 'Short'
+            when length>=40 and length<60
+                Then 'Medium'
+            when length>=90
+                then 'Long'
+        End) length
+from 
+     film 
+)
+SELECT * FROM CTE_FILM;
+
+select film_id, title,length from cte_film
+where length='Medium'
+order by title
+
+_______________________________________________________________________________
+
+Joining CTE
+
+SELECT * FROM RENTAL;
+with cte_rental as 
+    (
+        select staff_id, count(rental_id) counter
+        from rental 
+        group by staff_id
+)
+SELECT first_name,last_name,counter from staff s
+inner join cte_rental using (staff_id)
+
+**********************  Recursive common table expressions ****************************
+
+
+Recursive query : Recursive CTE
+
+when we want to work with hireachical data like organizationa structers or bills we can use this type of queries.
+
+Terms:
+
+1. Non Recursive: CTE query which basically form the CTE structure.
+
+2. Recursive: one or more cte queris joined with  union or union all operator.
+
+3. Termination check: recursion stops when no rows are returned from the previous iretaion.
+
+How Postgre executes Recursive CTEs.
+
+1. execute non recursive terms forms base result
+2. execute recursive terms and return the resultset (0, R+1, R+2...)
+3. repeate until the empty set return
+4. return the final reusltset which is the union of all resultsets
+
+(R0+R1+R2....)
+
+
+Simple iteration:
+
+with recursive mydata (n) as (
+    select 10
+    union
+    select n+10 from mydata where n+10<=100
+)
+select * from mydata
+
+with Table********
+
+create table employee(
+    employee_id serial primary key,
+    fullname varchar(100),
+    manager_id int
+)
+
+insert into employee (fullname,manager_id)
+values
+('Alex',null),
+('bob',1),
+('catty',1),
+('mikhail',2),
+('aniss',2),
+('nandita vora',2),
+('veena panchal',3),
+('Sonam Soni',3),
+('Eric Rampling',4),
+('Max Mills',5),
+('Ryan Rathod',7),
+('Rohan Savnekar',8)
+
+with recursive mydata as (
+    select employee_id,manager_id,fullname
+    from employee
+    where employee_id=2
+    
+    union
+        select 
+            e.employee_id,
+            e.manager_id,
+            e.fullname
+        from
+            employee e
+    
+        inner join mydata m on m.employee_id = e.manager_id
+)
+select * from mydata
+
+***************************** Simplifying queries with views *******************************
+
+
+View is simply named query which basically provides a way to represent data in a database table.
+
+--> we can warp the queries (complex)
+
+--> view its is not storing any data.
+
+1. regular view
+
+create view customer_master as
+select cu.customer_id id,
+       cu.first_name || ' ' || cu.last_name as name,
+       a.address,
+       a.postal_code as zipcode,
+       city.city,
+       country.country
+from  customer cu
+    inner join address a using (address_id)
+    inner join city using (city_id)
+    inner join country using (country_id)
+
+select * from customer_master
+
+
+________________________________________________________________________________________________________
+
+we can nor revove any existing column in the view, if you try then you will get error (can not drop column from view) query will give the same result as how the query written in your view.
+
+Rename the view
+-------------------------
+
+alter view customer_master Rename to customer_info
+
+select * from customer_info
+
+alter view customer_info Rename column name to fullname
+
+select * from customer_info
+
+**** Drop View
+
+drop view if exists customer_info
+
+____________________________________________________________________________________________
+
+Materialized View
+----------------------------------------
+
+you can store data physically in view which is called materialized view.
+
+it cache the result and allows you to refresh the result reoridically.
+
+create materialized view category_based_sales
+as
+select c.name as category,
+    sum(p.amount) as total_sales
+from 
+(((((payment p
+join rental r on ((p.rental_id=r.rental_id)))
+join inventory i on ((r.inventory_id= i.inventory_id)))
+join film f on ((i.film_id=f.film_id)))
+join film_category fc on ((f.film_id=fc.film_id)))
+join category c on ((fc.category_id= c.category_id)))
+group by c.name
+order by sum(p.amount) 
+with no data
+
+REFRESH MATERIALIZED VIEW category_based_sales
+select * from category_based_sales
+
+drop materialized view category_based_sales
+
+_________________________________________________________________________________________________
+Concurrent Materialized view (Refresh data automatically)
+
+create materialized view category_based_sales
+as
+select c.name as category,
+    sum(p.amount) as total_sales
+from 
+(((((payment p
+join rental r on ((p.rental_id=r.rental_id)))
+join inventory i on ((r.inventory_id= i.inventory_id)))
+join film f on ((i.film_id=f.film_id)))
+join film_category fc on ((f.film_id=fc.film_id)))
+join category c on ((fc.category_id= c.category_id)))
+group by c.name
+order by sum(p.amount) 
+
+create unique index myindex on category_based_sales (category)
+refresh materialized view concurrently category_based_sales
+
+***************************** Handling concurrency and reversibility with transactions ********************
+
+Transaction: execution multiple operations as a set of single unit.
+
+ACID properties: 
+
+Atomicity: complete full transaction or do nothing
+
+Consistency: it ensures the change to data written to the database must be valid and
+follow the predefined rules.
+
+Isolation: determines how transaction integrety is visible to other transaction
+
+Durablity:
+
+___________________________________________________________________________________
+
+create table accounts(
+    id int generated by default as identity primary key,
+    name varchar(100),
+    balance dec(15,2)
+)
+insert into accounts (name,balance)
+values ('alex',10000)
+
+begin;
+
+insert into accounts(name,balance)
+values('bob',20000)
+
+commit;
+________________________________________________________________________________________
+
+Execute multiple operations in transaction.
+
+
+begin;
+
+update accounts 
+set balance= balance-200
+where id=1;
+
+update accounts
+set balance=balance+1000
+where id=2;
+
+commit;
+
+select * from accounts
+
+Before commit if you open this in another query panel then you can't see the updated data.
+
+after commit you can see the reflections.
+
+__________________________________________________________________________________________
+
+
+begin;
+
+update accounts 
+set balance= balance-200
+where id=1;
+
+update accounts
+set balance=balance+1000
+where id=2;
+
+rollback;
+
+select * from accounts
+_____________________________________________________________________________________
+
+Savepoint example
+
+begin;
+
+insert into accounts (name, balance)
+values ('catty',89000)
+
+insert into accounts (name, balance)
+values ('Prince',99000)
+
+savepoint first1
+
+update accounts 
+set balance= balance-500
+where id=1;
+
+update accounts
+set balance=balance+400
+where id=2;
+
+rollback to savepoint first1;
+
+select * from accounts
+
+(it will commit the data in DB till save point and rollback after that)
+
+***************** Migration ***************************************************
+
+basically transfering database to multiple location.
+
+2 types
+
+1.dump migration
+	easy to handle
+	pg_dum command to get the dump in some file (pg_dump >test.sql)
+
+	not required super user permission
+	(connect, select on all tables, select on all sequences in DB)
+
+	not suggested if you are working with the live database
+	(suggested for offline DB, maintanance mode)
+
+2. Continous migration:
+
+	check the database is accesible from the public internet
+	
+	allow remote connections:
+
+	>show listen_addresses; (if it is giving * then ok)
+
+	>ALTER SYSTEM set listen_addresses= '*';
+
+	change ip addresses  (0.0.0.0/0)
+	
+	>data>OPEN FILE pg_hba edit ipv4 and ipv6 as shown below
+
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     scram-sha-256
+# IPv4 local connections:
+host    all             all             0.0.0.0/0            scram-sha-256
+# IPv6 local connections:
+host    all             all             ::/0                 scram-sha-256
+	
+	enable logical replication
+
+	> by default cloud database provides have logical replication enabled by default
+
+	> show wal_level; (if not showing logical then update using below statement)
+
+	> alter system set wal_level= logical;
+
+	set the maximum replication slots
+
+	>show max_replications_slots;
+
+	>alter system set max_replication_slots= any_number
+	
+	restart the server
+
+Once this configuration done you can migrate from any where.
+
+setup migration> continue migrartion
+
+____________________________________________________________________________________________
+
+alter table customer add column remarks text -- fast and safe
+
+set local lock_timeout to '100ms'
+
+________________________________________________________________________________
+
+Aplication Program interface
+
+(backedn layer which ic connecting with my DB and pass the data
+in diffrent common format like json,xml)
+
+Apis uses diffrent http methods get,post,put,delete etc..
+
+get to retrive all
+post to create new records
+put update records
+delete to detete the records
+
+to check post, put and delete method you required POSTMAN tool.
+
+change the methods from there and test the APIs.
+
+________________________________________________________________________________
+
+
+*****************  Security around PostgreSQL ************************************
+
+postgre is having bunch of security features packed with it for the database.
+
+1. Postgre server listen address
+
+	show listen_address
+
+   by default is * so can edit this with some proper address for access.
+
+2. By default the connection configurations it allows 100.
+
+	max_connections=100
+
+	superuser_reserved_connections = 3
+
+	(out of 100 only 97 connection open for regular user)
+
+3. Host based authentication:
+
+	# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+	  host  software_team     all             192.168.3.0/24        reject
+
+	  host  sales_team     all             192.168.7.0/32           trust
+
+(small level of databases)
+
+4. Authentication with LDAP server
+
+	light weight directory access protocol
+
+	THIS authentication serverprovides user credentials authentication and stored details like name, 
+domain name, business units etc.
+
+	# TYPE  DATABASE            USER            ADDRESS                 METHOD
+	host	production_team    producstion_user  0.0.0.0/0               ldap 
+	dapserver=192.168.7.200 ldapport=389 ldapprefix="cn" ldapsuffix=" dc=organization"
+
+5. Authentication with the certificate
+
+6. Role based authentication.
+
+	create a role in a database
+
+	proving privileges. (grant and revoke the permission)
+
+create user sonam indentified by 'sonam@123'
+
+GRANT select on SampleDB to sonam
+GRANT update on SampleDB to user2
+
+create Role hr;
+
+grant permission to HR;
+
+Example
+--------------------------------
+create user usera;
+
+create role hr login createdb createrole
+
+grant hr to usera
+
+
+************ Fast parallel testing *****************************************
+
+we can implement with parrellel query in postgresql.
+
+basically helps when to you are running in a multiple CPU envitonment
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
